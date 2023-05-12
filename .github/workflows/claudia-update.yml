@@ -1,0 +1,30 @@
+name: claudia-update
+run-name: ${{ github.actor }} is updating a Lambda function via Claudia!
+on:
+  push:
+    branches:
+      - "main"
+jobs:
+  update-claudia:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+      - run: npm install -g claudia
+      - name: Ensure claudia.json present from repo
+        run: |
+          git config --local user.email ${{ secrets.AWS_SERVICE_EMAIL }}
+          git config --local user.name ${{ secrets.AWS_SERVICE_USERNAME }}
+          git pull
+      - name: If claudia.json doesn't exist or lambda function not deployed, exit with code 1
+        run: |
+          if test -f "./claudia.json" && aws lambda get-function --function-name ${{ github.event.repository.name }}; then
+            claudia update
+          else
+            exit 1
+          fi

@@ -1,0 +1,25 @@
+name: claudia-deploy
+run-name: ${{ github.actor }} is deploying a Lambda function via Claudia!
+on: workflow_dispatch
+jobs:
+  claudia-deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+      - run: npm install -g claudia
+      - name: deploy to lambda using claudia
+        run: claudia create --region us-west-1 --name ${{ github.event.repository.name }} --handler lambda.handler --role ${{ secrets.CLAUDIA_IAM_ROLE }}
+      - name: Commit files
+        id: commit
+        run: |
+          git config --local user.email ${{ secrets.AWS_SERVICE_EMAIL }}
+          git config --local user.name ${{ secrets.AWS_SERVICE_USERNAME }}
+          git add ./claudia.json
+          git commit --allow-empty -m "Add claudia.json"
+          git push
